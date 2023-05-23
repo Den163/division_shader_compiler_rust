@@ -1,0 +1,6 @@
+/target
+/Cargo.lock
+*.metal
+.vscode
+.idea
+.DS_Store
