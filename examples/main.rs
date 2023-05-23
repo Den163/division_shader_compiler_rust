@@ -1,8 +1,6 @@
-use std::ffi::{c_char, c_ulong, c_void, CStr, CString};
+use division_shader_compiler_rust::{ShaderCompiler, ShaderType};
 use std::fs;
-use std::ptr::null_mut;
-use division_shader_compiler_rust::interface::*;
-use walkdir::{WalkDir, DirEntry};
+use walkdir::{DirEntry, WalkDir};
 
 struct GlslToMslShader {
     glsl_path: String,
@@ -18,9 +16,7 @@ fn main() {
 }
 
 unsafe fn compile_glsl_to_metal() {
-    let mut ctx: *mut DivisionShaderCompilerContext = null_mut();
-
-    division_shader_compiler_alloc(&mut ctx);
+    let compiler = ShaderCompiler::new();
 
     let glsl_to_msl_shaders = WalkDir::new("examples/shaders")
         .into_iter()
@@ -28,45 +24,27 @@ unsafe fn compile_glsl_to_metal() {
         .filter_map(|o| o);
 
     for s in glsl_to_msl_shaders {
-        let shader_src = CString::new(
-            fs::read_to_string(s.glsl_path).expect("Can't read shader source from file")
-        ).unwrap();
-        let entry_point = CString::new(s.entry_point).unwrap();
-        let mut spirv_bytes: c_ulong = 0;
-        let mut msl_size: c_ulong = 0;
+        let shader_src =
+            fs::read_to_string(s.glsl_path).expect("Can't read shader source from file");
 
-        assert!(division_shader_compiler_compile_glsl_to_spirv(
-            ctx,
-            shader_src.as_ptr(), shader_src.as_bytes().len() as i32,
-            s.shader_type,
-            entry_point.as_ptr(),
-            &mut spirv_bytes,
-        ));
+        let msl_src = compiler
+            .compile_glsl_to_metal(&shader_src.as_str(), &s.entry_point, s.shader_type)
+            .expect("Failed to compile shader");
 
-        assert!(division_shader_compiler_compile_spirv_to_metal(
-            ctx,
-            (*ctx).spirv_buffer, spirv_bytes,
-            s.shader_type,
-            entry_point.as_ptr(),
-            &mut msl_size,
-        ));
-
-        let msl_str = CStr::from_ptr((*ctx).output_src_buffer).to_str().unwrap();
-
-        fs::write(s.out_msl_path, msl_str)
-            .expect("Failed to write metal source to the file");
-
+        fs::write(s.out_msl_path, msl_src).expect("Failed to write metal source to the file");
     }
-
-    division_shader_compiler_free(ctx);
 }
 
 fn make_glsl_to_msl_shader(entry: Result<DirEntry, walkdir::Error>) -> Option<GlslToMslShader> {
-    if entry.is_err() { return None; }
+    if entry.is_err() {
+        return None;
+    }
 
     let entry = entry.ok().unwrap();
     let extension = entry.path().extension();
-    if extension.is_none() { return None; }
+    if extension.is_none() {
+        return None;
+    }
 
     let extension = extension.unwrap();
 
@@ -87,9 +65,11 @@ fn make_glsl_to_msl_shader(entry: Result<DirEntry, walkdir::Error>) -> Option<Gl
         entry_point,
         glsl_path: String::from(entry.path().to_str().unwrap()),
         out_msl_path: String::from(
-            entry.path().with_extension(
-                format!("{}.metal", extension.to_str().unwrap())
-            ).to_str().unwrap()
+            entry
+                .path()
+                .with_extension(format!("{}.metal", extension.to_str().unwrap()))
+                .to_str()
+                .unwrap(),
         ),
     });
 }

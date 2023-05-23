@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, c_void, c_ulong};
+use std::ffi::{c_char, c_void, c_ulong};
 
 #[repr(C)]
 pub struct DivisionShaderCompilerContext {

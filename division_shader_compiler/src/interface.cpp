@@ -151,12 +151,8 @@ bool division_shader_compiler_compile_spirv_to_metal(
     {
         size_t spv_size = spirv_byte_count / sizeof(uint32_t);
         spirv_cross::CompilerMSL msl {(const uint32_t*) spirv_bytes, spv_size};
-        auto entry_points = msl.get_entry_points_and_stages();
 
-        if (entry_point)
-        {
-            msl.set_entry_point(entry_point, division_shader_type_to_spv_cross_type(shader_type));
-        }
+        msl.set_entry_point(entry_point, division_shader_type_to_spv_cross_type(shader_type));
         spirv_cross::CompilerMSL::Options opt {
             .msl_version = spirv_cross::CompilerMSL::Options::make_msl_version(3, 0),
             .enable_decoration_binding = true,
