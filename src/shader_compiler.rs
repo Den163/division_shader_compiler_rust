@@ -86,7 +86,7 @@ impl ShaderCompiler {
 
             let buff = (*self._ctx).spirv_buffer as *mut u8;
             let mut v = Vec::<u8>::with_capacity(out_spirv_byte_count as usize);
-            buff.copy_to(v.as_mut_ptr(), v.capacity());
+            buff.copy_to_nonoverlapping(v.as_mut_ptr(), v.capacity());
 
             Ok(v)
         }
